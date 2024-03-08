@@ -33,6 +33,11 @@ class UserController {
         return userService.save(user);
     }
 
+    @PutMapping
+    public User update(@RequestBody User user){
+        return userService.save(user);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(code = HttpStatus.NO_CONTENT)
     public void deleteById(@PathVariable Integer id){

@@ -3,6 +3,7 @@ package com.alexdev.springbootapirestapp.controllers;
 import com.alexdev.springbootapirestapp.models.User;
 import com.alexdev.springbootapirestapp.services.impl.UserService;
 import com.alexdev.springbootapirestapp.services.impl.UserServiceImpl;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.h2.engine.UserBuilder;
 import org.hamcrest.Matchers;
@@ -15,6 +16,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -37,16 +39,16 @@ public class UserControllerTest {
 
     @BeforeAll
     static void init(){
-        userTest = User.builder()
-                    .name("Florencia")
-                    .lastName("Lopez")
-                    .email("afgh@gmail.com")
-                .build();
-
         usersTest= List.of(
                 User.builder().id(1L).name("Alex").lastName("Lopez").email("asda@gmail.com").build(),
                 User.builder().id(2L).name("Jorge").lastName("Franco").email("dsaf@gmail.com").build()
         );
+        userTest = User.builder()
+                .id((long)(usersTest.size()+1))
+                .name("Florencia")
+                .lastName("Lopez")
+                .email("afgh@gmail.com")
+                .build();
     }
 
     @Test
@@ -75,20 +77,7 @@ public class UserControllerTest {
     }
 
     @Test
-    void shouldDeleteUserById() throws Exception {
-        doNothing()
-                .when(userService)
-                .deleteById(1);
-
-        mockMvc.perform(delete("/users/1"))
-                .andExpect(status().isNoContent());
-
-        verify(userService, times(1)).deleteById(1);
-    }
-
-    @Test
     void shouldSaveUser() throws Exception {
-        userTest.setId(((long) usersTest.size()+1));
         var json = objMapper.writeValueAsString(userTest);
 
         when(userService.save(any(User.class)))
@@ -104,12 +93,36 @@ public class UserControllerTest {
                 .andExpect(jsonPath("$.email").value(userTest.getEmail()));
     }
     @Test
-    void shouldUpdateUserById() {
+    void shouldUpdateUserById() throws Exception {
         User userUpdated = userTest;
         userUpdated.setName("Ricardo");
-        userUpdated.setName("Obregon");
+        userUpdated.setEmail("asdsada@gmail.com");
 
+        when(userService.save(any(User.class)))
+                .thenReturn(userUpdated);
 
+        String jsonContent = objMapper.writeValueAsString(userUpdated);
+
+        mockMvc.perform(put("/users")
+                        .content(jsonContent)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andDo(print())
+                .andExpect(content().json(jsonContent))
+                .andExpect(jsonPath("$.name").value(userUpdated.getName()))
+                .andExpect(jsonPath("$.email").value(userUpdated.getEmail()));
+    }
+
+    @Test
+    void shouldDeleteUserById() throws Exception {
+        doNothing()
+                .when(userService)
+                .deleteById(1);
+
+        mockMvc.perform(delete("/users/1"))
+                .andExpect(status().isNoContent());
+
+        verify(userService, times(1)).deleteById(1);
     }
 
     private ResultActions doGetRequest(String url) throws Exception {
